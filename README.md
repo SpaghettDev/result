@@ -8,13 +8,30 @@ Small, relatively fast, header-only result class.
 #include <string>
 #include <result/result.hpp>
 
+struct S
+{
+    int i;
+};
+
+// works for both aggregates and non-aggregates
+result::Result<S> someFunction()
+{
+    return result::Ok<S>(7); // avoids copy
+    // or
+    return result::Ok(S{ 7 });
+    // or
+    return { 7 }; // also avoids copy, better be explicit though
+}
+
 result::Result<int> parseFromString(const std::string& str)
 {
     try
     {
         return std::stoi(str);
         // or
-        return result::Ok<int>(std::stoi(str))
+        return result::Ok<int>(std::stoi(str));
+        // or
+        return result::Ok(std::stoi(str)); // won't work if T is not a primitive
     }
     catch (...)
     {

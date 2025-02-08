@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <string_view>
 #include <new>
 #include <stdexcept>
@@ -9,8 +10,10 @@ namespace result
 {
 	namespace impl
 	{
+        struct dummy_t {};
+
 		template <typename T, typename ...Args>
-		constexpr inline static std::monostate construct_helper(void* placement, Args&&... args)
+		constexpr inline static dummy_t construct_helper(void* placement, Args&&... args)
 		{
 			new (placement) T(std::forward<Args>(args)...);
 			return {};
@@ -39,14 +42,25 @@ namespace result
 	class Result
 	{
 	public:
+        using base_t = std::remove_cvref_t<T>;
+
 		constexpr Result(Result<void>&& re)
 			: m_error_reason(std::move(re.m_error_reason))
 		{}
 
+		constexpr Result(base_t&& res)
+			: dummy(impl::construct_helper<base_t>(&m_result, std::move(res))),
+				m_error_reason()
+		{}
+		constexpr Result(const base_t& res)
+			: dummy(impl::construct_helper<base_t>(&m_result, std::move(res))),
+				m_error_reason()
+		{}
+
 		template <typename ...Args>
 		constexpr Result(Args&&... args)
-				requires(std::is_constructible_v<T, Args...>)
-			: dummy(impl::construct_helper<T>(&m_result, std::forward<Args>(args)...)),
+				requires(std::is_constructible_v<T, Args...> || std::is_aggregate_v<T>)
+			: dummy(impl::construct_helper<base_t>(&m_result, std::forward<Args>(args)...)),
 				m_error_reason()
 		{}
 
@@ -56,7 +70,7 @@ namespace result
 		constexpr ~Result()
 		{
 			if (m_error_reason.empty())
-				std::destroy_at(std::launder(reinterpret_cast<T*>(&m_result)));
+				std::destroy_at(std::launder(reinterpret_cast<base_t*>(&m_result)));
 		}
 
 		constexpr T&& unwrap() &&
@@ -64,7 +78,7 @@ namespace result
 			if (!m_error_reason.empty())
 				throw std::runtime_error("Tried unwrapping an erroneous Result<T>!");
 
-			return std::move(*std::launder(reinterpret_cast<T*>(&m_result)));
+			return std::move(*std::launder(reinterpret_cast<base_t*>(&m_result)));
 		}
 
 		constexpr T& unwrap() &
@@ -72,7 +86,7 @@ namespace result
 			if (!m_error_reason.empty())
 				throw std::runtime_error("Tried unwrapping an erroneous Result<T>!");
 
-			return *std::launder(reinterpret_cast<T*>(&m_result));
+			return *std::launder(reinterpret_cast<base_t*>(&m_result));
 		}
 
 		constexpr const T& unwrap() const&
@@ -80,7 +94,7 @@ namespace result
 			if (!m_error_reason.empty())
 				throw std::runtime_error("Tried unwrapping an erroneous Result<T>!");
 
-			return *std::launder(reinterpret_cast<const T*>(&m_result));
+			return *std::launder(reinterpret_cast<const base_t*>(&m_result));
 		}
 
 
@@ -110,7 +124,7 @@ namespace result
 		union
 		{
 			alignas(T) std::byte m_result[sizeof(T)];
-			std::monostate dummy;
+			impl::dummy_t dummy;
 		};
 		const std::string_view m_error_reason;
 	};
@@ -119,6 +133,12 @@ namespace result
 	constexpr inline static Result<T> Ok(Args&&... args)
 	{
 		return Result<T>{ std::forward<Args>(args)... };
+	}
+
+	template <typename T>
+	constexpr inline static Result<T> Ok(T&& res)
+	{
+		return Result<T>{ std::move(res) };
 	}
 
 	constexpr inline static Result<void> Err(const std::string_view& reason = "")
