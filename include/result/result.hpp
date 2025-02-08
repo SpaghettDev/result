@@ -10,7 +10,7 @@ namespace result
 	namespace impl
 	{
 		template <typename T, typename ...Args>
-		inline static std::monostate construct_helper(void* placement, Args&&... args)
+		constexpr inline static std::monostate construct_helper(void* placement, Args&&... args)
 		{
 			new (placement) T(std::forward<Args>(args)...);
 			return {};
@@ -46,7 +46,7 @@ namespace result
 		template <typename ...Args>
 		constexpr Result(Args&&... args)
 				requires(std::is_constructible_v<T, Args...>)
-			: dummy(construct_helper<T>(&m_result, std::forward<Args>(args)...)),
+			: dummy(impl::construct_helper<T>(&m_result, std::forward<Args>(args)...)),
 				m_error_reason()
 		{}
 
