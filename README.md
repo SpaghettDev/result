@@ -1,12 +1,12 @@
-# result
+# LTResult
 
-Small, relatively fast, header-only result class.
+LTResult, lightweight result. Small, relatively fast, header-only result class.
 
 ## API Example
 
 ```cpp
 #include <string>
-#include <result/result.hpp>
+#include <ltresult/result.hpp>
 
 struct S
 {
@@ -31,7 +31,7 @@ result::Result<int> parseFromString(const std::string& str)
         // or
         return result::Ok<int>(std::stoi(str));
         // or
-        return result::Ok(std::stoi(str)); // won't work if T is not a primitive
+        return result::Ok(std::stoi(str));
     }
     catch (...)
     {
