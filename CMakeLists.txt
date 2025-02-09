@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(LTResult VERSION 2.1.0)
+project(LTResult VERSION 2.2.0)
 
 add_library(${PROJECT_NAME} INTERFACE)
 # CMake is stupid and doesn't know which language this library is written in

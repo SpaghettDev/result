@@ -67,6 +67,10 @@ namespace result
 		constexpr Result<T>& operator=(Result<T>&& other)
 		{
 			auto&& otherResult = std::move(other.m_result);
+			
+			this->~Result<T>();
+			new (this) Result<T>();
+
 			std::memcpy(
 				m_result,
 				std::launder(reinterpret_cast<base_t*>(&otherResult)),
@@ -138,6 +142,11 @@ namespace result
 		constexpr bool isErr() const { return !m_error_reason.empty(); }
 
 		constexpr operator bool() const { return m_error_reason.empty(); }
+
+	private:
+		constexpr Result()
+			: m_error_reason()
+		{}
 
 	private:
 		union
