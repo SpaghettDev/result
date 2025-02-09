@@ -10,7 +10,7 @@ namespace result
 {
 	namespace impl
 	{
-        struct dummy_t {};
+		struct dummy_t {};
 
 		template <typename T, typename ...Args>
 		constexpr inline static dummy_t construct_helper(void* placement, Args&&... args)
@@ -42,7 +42,7 @@ namespace result
 	class Result
 	{
 	public:
-        using base_t = std::remove_cvref_t<T>;
+		using base_t = std::remove_cvref_t<T>;
 
 		constexpr Result(Result<void>&& re)
 			: m_error_reason(std::move(re.m_error_reason))
@@ -63,6 +63,25 @@ namespace result
 			: dummy(impl::construct_helper<base_t>(&m_result, std::forward<Args>(args)...)),
 				m_error_reason()
 		{}
+
+		constexpr Result<T>& operator=(Result<T>&& other)
+		{
+			auto&& otherResult = std::move(other.m_result);
+			std::memcpy(
+				m_result,
+				std::launder(reinterpret_cast<base_t*>(&otherResult)),
+				sizeof(base_t)
+			);
+
+			return *this;
+		}
+
+		constexpr Result<T>& operator=(Result<void>&& other)
+		{
+			this->~Result<T>();
+
+			return *new (this) Result<T>(std::move(other));
+		}
 
 		template<typename ...Args>
 		Result() requires(!std::is_constructible_v<T, Args...>) = delete;
